@@ -4,3 +4,25 @@
 
 . Create a Python virtual environment.
 . Run `pip install .` to install the app.
+. Ensure that a MySQL database server is running, with a schema created for this app.
+. Set the following environment variables:
++
+[%autowidth.stretch]
+|===
+|Variable name |Description
+
+|`DB_USERNAME`
+|The name of the database user account for this application.
+
+|`DB_PASSWORD`
+|The password of the database user account.
+
+|`DB_HOST`
+|The hostname or IP address of the database server.
+
+|`DB_PORT`
+|The port number of the database server.
+
+|`DB_NAME`
+|The name of the database schema for this application.
+|===
