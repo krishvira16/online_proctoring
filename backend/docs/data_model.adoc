@@ -1,0 +1,7 @@
+= Data model
+:!last-update-label:
+
+.Entity-relationship diagram of the data model
+image::data_model.svg[]
+
+// TODO: describe the data model in detail.
