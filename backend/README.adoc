@@ -1,0 +1,6 @@
+:!last-update-label:
+
+== Installation and setup instructions:
+
+. Create a Python virtual environment.
+. Run `pip install .` to install the app.
