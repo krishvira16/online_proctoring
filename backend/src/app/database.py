@@ -5,7 +5,8 @@ from typing import Annotated
 from fastapi import Depends, FastAPI
 from sqlalchemy import URL
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSession
-from sqlmodel import SQLModel
+
+from .data_model import Base
 
 
 mysql_url = URL.create(
@@ -35,7 +36,7 @@ async def create_db_and_tables(app: FastAPI):
     if engine is None:
         raise Exception('`engine` should be created before calling this function.')
     async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+        await conn.run_sync(Base.metadata.create_all)
     yield
 
 async def get_session():
