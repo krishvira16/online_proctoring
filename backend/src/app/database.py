@@ -20,6 +20,7 @@ engine: None | AsyncEngine = None
 
 @asynccontextmanager
 async def create_engine(app: FastAPI):
+    global engine
     engine = create_async_engine(
         mysql_url,
         echo=True,
