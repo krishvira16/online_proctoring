@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
 from os import environ
+from typing import Annotated
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 from sqlalchemy import URL
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncEngine, AsyncSession
 from sqlmodel import SQLModel
 
 
@@ -36,3 +37,9 @@ async def create_db_and_tables(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
     yield
+
+async def get_session():
+    async with AsyncSession(engine) as session:
+        yield session
+
+SessionDep = Annotated[AsyncSession, Depends(get_session)]
