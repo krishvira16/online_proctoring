@@ -84,7 +84,11 @@ class MultipleChoiceQuestion(Base, kw_only=True):
     id: Mapped[int_pk] = mapped_column(ForeignKey('question.id', ondelete='CASCADE'), init=False)
     options: Mapped[list['Option']] = relationship(back_populates='question', foreign_keys='[Option.question_id]', cascade='all, delete-orphan')
     correct_option_id: Mapped[None | int] = mapped_column(init=False)
-    correct_option: Mapped['None | Option'] = relationship(foreign_keys='[MultipleChoiceQuestion.id, MultipleChoiceQuestion.correct_option_id]', post_update=True)
+    correct_option: Mapped['None | Option'] = relationship(
+        foreign_keys='[MultipleChoiceQuestion.id, MultipleChoiceQuestion.correct_option_id]', 
+        post_update=True, 
+        overlaps="multiple_choice_question"
+    )
     __table_args__ = ForeignKeyConstraint(columns=['id', 'correct_option_id'], refcolumns=['option.question_id', 'option.id']),
 
 class Option(Base):
@@ -203,7 +207,7 @@ class MCQAnswer(Base):
     test_attempt_id: Mapped[int_pk] = mapped_column(init=False)
     question_id: Mapped[int_pk] = mapped_column(init=False)
     chosen_option_id: Mapped[Optional[int]] = mapped_column(init=False)
-    chosen_option: Mapped[Optional[Option]] = relationship(default=None)
+    chosen_option: Mapped[Optional[Option]] = relationship(default=None, overlaps="mcq_answer")
     __table_args__ = (
         ForeignKeyConstraint(columns=['test_attempt_id', 'question_id'], refcolumns=['answer.test_attempt_id', 'answer.question_id'], ondelete='CASCADE'),
         ForeignKeyConstraint(columns=['question_id'], refcolumns=['multiple_choice_question.id']),
