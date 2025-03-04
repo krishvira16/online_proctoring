@@ -1,6 +1,6 @@
 [project]
 name = "online_proctoring"
-version = "0.0.0"
+version = "0.1.0.dev1"
 authors = [
     {name="Aditya Pune", email="aditya.pune@nmims.in"},
     {name="Krish Vira", email="krish.vira@nmims.in"},
@@ -10,15 +10,26 @@ description = "An online exam platform app with automated proctoring using gaze 
 readme = {file = "README.adoc", content-type = "text/plain"}
 requires-python = ">= 3.13.1"
 dependencies = [
-    "fastapi[standard] ~= 0.115",
+    "quart ~= 0.20.0",
+    "quart-schema[pydantic] ~= 0.21.0",
+    "quart-bcrypt ~= 0.0.9",
+    "quart-auth ~= 0.11.0",
     "sqlalchemy[asyncio] ~= 2.0",
-    "aiomysql ~= 0.2",
-    # "alembic"
+    # "alembic",
 ]
 
 [dependency-groups]
+dev = [
+    "aiosqlite ~= 0.21.0",
+    "python-dotenv ~= 1.0.1"
+]
 test = [
-    "pytest ~= 8.3"
+    {include-group = "dev"},
+    "pytest ~= 8.3",
+    # "pytest-asyncio",
+]
+prod = [
+    "aiomysql ~= 0.2",
 ]
 
 [build-system]

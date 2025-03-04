@@ -1,2 +1,8 @@
+# Environment
+.env
+
 # Byte-compiled files
 __pycache__/
+
+# Quart instance folder
+instance/

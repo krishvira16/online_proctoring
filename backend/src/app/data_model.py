@@ -4,12 +4,13 @@ from datetime import datetime
 from typing import Annotated, Optional
 
 from sqlalchemy import ForeignKey, ForeignKeyConstraint, UniqueConstraint
+from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase, Mapped, mapped_column, relationship, composite
 
 
 int_pk = Annotated[int, mapped_column(primary_key=True)]
 
-class Base(MappedAsDataclass, DeclarativeBase):
+class Base(DeclarativeBase, MappedAsDataclass, AsyncAttrs):
     pass
 
 class User(Base):

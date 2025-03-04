@@ -1,11 +1,29 @@
 :!last-update-label:
+:icons: font
 
 == Installation and setup instructions:
 
 . Create a Python virtual environment.
-. Run `pip install .` to install the app.
-. Ensure that a MySQL database server is running, with a schema created for this app.
-. Set the following environment variables:
+. Install the app by running `pip install .`.
+. Set the secret key used for securely signing cookies by setting the `QUART_SECRET_KEY` environment variable to the key value. To generate a secret key, run the following code:
++
+[source, python]
+----
+import secrets
+print(secrets.token_urlsafe(16))
+----
+. Set the `PROFILE` environment variable to either `development` or `production` to configure the app according to the deploy.
+. In the `production` profile, configure the work factor of the bcrypt password hashing algorithm by setting the number of rounds as the `BCRYPT_LOG_ROUNDS` environment variable. The larger the number of rounds, the more work will have to be done (exponentially) to hash the passwords. It should be tuned such that it takes about 1 second to verify a password on the system.
++
+[IMPORTANT]
+--
+This time-consuming behaviour is intentional, to make it difficult for attackers to crack the password using brute-force methods, but not so costly that it puts excessive burden on the system or irritates users.
+
+The work factor should be tuned for the deploy system since the performance varies drastically from system to system.
+--
++
+NOTE: In the `development` profile, the work factor is set to the minimum value of 4 to reduce the time for password verification as there is no security threat.
+. In the `production` profile, set the following environment variables used by the application to connect to the database:
 +
 [%autowidth.stretch]
 |===
@@ -26,6 +44,9 @@
 |`DB_NAME`
 |The name of the database schema for this application.
 |===
+. Initialise the database schema by running the `quart init-db` command, if not already done.
++
+NOTE: In the `development` profile, this requires the app instance folder to be created first, which is where the SQLite database file will reside. Run the `quart create-instance-folder` command to create the app instance folder.
 
 == Data model
 Refer to xref:docs/data_model.adoc[this document].
