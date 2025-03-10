@@ -1,43 +1,32 @@
-from collections.abc import Mapping
 import importlib
 from os import environ
-from pathlib import Path
-from typing import Any, Optional
 
 from quart import Quart
-from quart_bcrypt import Bcrypt
 from quart_auth import QuartAuth
 from quart_schema import QuartSchema
 
-from .default_config import profiles
+from .default_config import profile_config_type
 from . import database
+from . import password_hashing
 from . import error_handling
 from . import blueprints
 
 
-def create_app(testing_config: Optional[Mapping[str, Any]] = None):
+def create_app(use_testing_profile: bool = False):
     app = Quart(__name__)
     
-    instance_folder = Path(app.instance_path)
-    
-    @app.cli.command('create-instance-folder')
-    def create_instance_folder():
-        instance_folder.mkdir(parents=True)
-    
-    config_type = profiles[environ['PROFILE']]
-    config = config_type(instance_folder=instance_folder)
+    profile = 'testing' if use_testing_profile else environ['PROFILE']
+    config_type = profile_config_type[profile]
+    config = config_type(app)
     app.config.from_object(config)
 
-    if testing_config is not None:
-        app.config.from_mapping(testing_config)
-    
     database.init_app(app)
 
-    QuartSchema(app, convert_casing=True)
+    password_hashing.init_app(app)
+    auth_manager = QuartAuth(app) # type: ignore
+    setattr(app, 'auth_manager', auth_manager)
 
-    bcrypt = Bcrypt(app)
-    setattr(app, 'bcrypt', bcrypt)
-    QuartAuth(app) # type: ignore
+    QuartSchema(app, convert_casing=True)
 
     error_handling.init_app(app)
     

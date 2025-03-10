@@ -14,22 +14,22 @@ dependencies = [
     "quart-schema[pydantic] ~= 0.21.0",
     "quart-bcrypt ~= 0.0.9",
     "quart-auth ~= 0.11.0",
-    "sqlalchemy[asyncio] ~= 2.0",
+    "sqlalchemy[asyncio] ~= 2.0.38",
     # "alembic",
 ]
 
 [dependency-groups]
 dev = [
     "aiosqlite ~= 0.21.0",
-    "python-dotenv ~= 1.0.1"
+    "python-dotenv ~= 1.0.1",
 ]
 test = [
     {include-group = "dev"},
-    "pytest ~= 8.3",
-    # "pytest-asyncio",
+    "pytest ~= 8.3.5",
+    "pytest-asyncio ~= 0.25.3",
 ]
 prod = [
-    "aiomysql ~= 0.2",
+    "aiomysql ~= 0.2.0",
 ]
 
 [build-system]
@@ -38,3 +38,11 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/app"]
+
+[tool.pytest.ini_options]
+addopts = [
+    "--import-mode=importlib",
+]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"

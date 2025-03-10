@@ -5,14 +5,16 @@
 
 . Create a Python virtual environment.
 . Install the app by running `pip install .`.
-. Set the secret key used for securely signing cookies by setting the `QUART_SECRET_KEY` environment variable to the key value. To generate a secret key, run the following code:
+. Set the `PROFILE` environment variable to either `development` or `production` to configure the app according to the deploy.
+. In the `production` profile, set the secret key used for securely signing cookies by setting the `QUART_SECRET_KEY` environment variable to the key value. To generate a secret key, run the following code:
 +
 [source, python]
 ----
 import secrets
 print(secrets.token_urlsafe(16))
 ----
-. Set the `PROFILE` environment variable to either `development` or `production` to configure the app according to the deploy.
++
+NOTE: In the `development` profile, the secret key is hard-coded to 'dev' as there is no security threat.
 . In the `production` profile, configure the work factor of the bcrypt password hashing algorithm by setting the number of rounds as the `BCRYPT_LOG_ROUNDS` environment variable. The larger the number of rounds, the more work will have to be done (exponentially) to hash the passwords. It should be tuned such that it takes about 1 second to verify a password on the system.
 +
 [IMPORTANT]
@@ -44,7 +46,7 @@ NOTE: In the `development` profile, the work factor is set to the minimum value 
 |`DB_NAME`
 |The name of the database schema for this application.
 |===
-. Initialise the database schema by running the `quart init-db` command, if not already done.
+. Initialise the database schema by running the `quart init-db` command, if not done already.
 +
 NOTE: In the `development` profile, this requires the app instance folder to be created first, which is where the SQLite database file will reside. Run the `quart create-instance-folder` command to create the app instance folder.
 
