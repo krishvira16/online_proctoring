@@ -10,7 +10,7 @@ from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase, Mapped, mapped_co
 
 int_pk = Annotated[int, mapped_column(primary_key=True)]
 
-class Base(DeclarativeBase, MappedAsDataclass, AsyncAttrs):
+class Base(AsyncAttrs, MappedAsDataclass, DeclarativeBase):
     pass
 
 class User(Base):
@@ -31,7 +31,7 @@ class TestSetter(Base, kw_only=True):
     __tablename__ = 'test_setter'
 
     id: Mapped[int_pk] = mapped_column(ForeignKey('user.id', ondelete='CASCADE'), init=False)
-    created_tests: Mapped[list['Test']] = relationship(back_populates='creator')
+    created_tests: Mapped[list['Test']] = relationship(back_populates='creator', default_factory=list)
 
 class TestTaker(Base, kw_only=True):
     __tablename__ = 'test_taker'
@@ -54,12 +54,12 @@ class Test(Base, kw_only=True):
     start_time: Mapped[datetime]
     end_time: Mapped[datetime]
     guidelines: Mapped[str]
-    questions: Mapped[list['Question']] = relationship(back_populates='test', cascade='all, delete-orphan')
+    questions: Mapped[list['Question']] = relationship(cascade='all, delete-orphan')
     
     creator_id: Mapped[int] = mapped_column(ForeignKey("test_setter.id"), init=False)
     creator: Mapped[TestSetter] = relationship(back_populates="created_tests")
     
-    attempts: Mapped[list['TestAttempt']] = relationship(back_populates='test', cascade='all, delete-orphan')
+    attempts: Mapped[list['TestAttempt']] = relationship(back_populates='test', cascade='all, delete-orphan', default_factory=list)
 
     @property
     def max_marks(self) -> int:
@@ -70,22 +70,21 @@ class Question(Base, kw_only=True):
     
     id: Mapped[int_pk] = mapped_column(init=False)
     test_id: Mapped[int] = mapped_column(ForeignKey("test.id", ondelete='CASCADE'), init=False)
-    test: Mapped[Test] = relationship(back_populates="questions")
     question_text: Mapped[str]
-    multiple_choice_question: Mapped[Optional['MultipleChoiceQuestion']] = relationship(cascade='all, delete-orphan')
-    text_field_question: Mapped[Optional['TextFieldQuestion']] = relationship(cascade='all, delete-orphan')
-    attachment_question: Mapped[Optional['AttachmentQuestion']] = relationship(cascade='all, delete-orphan')
+    multiple_choice_question: Mapped[Optional['MultipleChoiceQuestion']] = relationship(default=None, cascade='all, delete-orphan')
+    text_field_question: Mapped[Optional['TextFieldQuestion']] = relationship(default=None, cascade='all, delete-orphan')
+    attachment_question: Mapped[Optional['AttachmentQuestion']] = relationship(default=None, cascade='all, delete-orphan')
     max_marks: Mapped[int]
     
-    answer_attempts: Mapped[list['Answer']] = relationship(back_populates='question', cascade='all, delete-orphan')
+    answer_attempts: Mapped[list['Answer']] = relationship(back_populates='question', cascade='all, delete-orphan', default_factory=list)
 
 class MultipleChoiceQuestion(Base, kw_only=True):
     __tablename__ = 'multiple_choice_question'
     
     id: Mapped[int_pk] = mapped_column(ForeignKey('question.id', ondelete='CASCADE'), init=False)
-    options: Mapped[list['Option']] = relationship(back_populates='question', foreign_keys='[Option.question_id]', cascade='all, delete-orphan')
+    options: Mapped[list['Option']] = relationship(foreign_keys='[Option.question_id]', cascade='all, delete-orphan')
     correct_option_id: Mapped[None | int] = mapped_column(init=False)
-    correct_option: Mapped['None | Option'] = relationship(
+    correct_option: Mapped['Option'] = relationship(
         foreign_keys='[MultipleChoiceQuestion.id, MultipleChoiceQuestion.correct_option_id]', 
         post_update=True, 
         overlaps="multiple_choice_question"
@@ -97,7 +96,6 @@ class Option(Base):
     
     id: Mapped[int_pk] = mapped_column(init=False)
     question_id: Mapped[int] = mapped_column(ForeignKey("multiple_choice_question.id", ondelete='CASCADE'), init=False)
-    question: Mapped[MultipleChoiceQuestion] = relationship(back_populates="options", foreign_keys='[Option.question_id]')
     __table_args__ = UniqueConstraint('id', 'question_id'),
     option_text: Mapped[str]
 
