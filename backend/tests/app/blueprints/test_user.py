@@ -2,7 +2,6 @@ from copy import replace
 from datetime import datetime, timedelta
 
 import pytest
-import pytest_asyncio
 from quart import Quart
 from quart.typing import TestClientProtocol
 from quart_auth import QuartAuth, generate_auth_token
@@ -13,26 +12,12 @@ from app.data_model import User
 from app.database import orm_session
 
 
-@pytest_asyncio.fixture
-def user_details():
-    return UserDetails(
-        username='test_username',
-        full_name='test_full_name',
-        email='email@test.py',
-        password='test_password'
-    )
-
-@pytest_asyncio.fixture
-async def existing_user_details(test_client: TestClientProtocol, user_details: UserDetails):
-    await test_client.post('/user/create_account', json=user_details) # Create a user account
-    return user_details
-
 class TestCreateAccount:
     async def test_create_account(self, app: Quart, test_client: TestClientProtocol, user_details: UserDetails):
         response = await test_client.post('/user/create_account', json=user_details)
         assert response.status_code == 201
         response_body = await response.get_json()
-        assert response_body == 'Account created successfully'
+        assert response_body is None
         async with app.app_context():
             saved_user_id = await orm_session.scalar(select(User.id).where(User.username == user_details.username))
             assert saved_user_id is not None
@@ -53,15 +38,18 @@ class TestCreateAccount:
         response_body = await response.get_json()
         assert response_body == 'E-mail address is already registered.'
 
+def get_client_auth_cookie(test_client: TestClientProtocol, auth_manager: QuartAuth):
+    for cookie in list(test_client.cookie_jar):  # type: ignore
+        if (
+            not cookie.domain_specified 
+            and cookie.path == auth_manager.cookie_path 
+            and cookie.name == auth_manager.cookie_name
+        ):
+            return cookie
+    else:
+        return None
+
 class TestLogin:
-    def get_client_auth_cookie(self, test_client: TestClientProtocol, auth_manager: QuartAuth):
-        cookies = list(test_client.cookie_jar) # type: ignore
-        auth_cookie_list = [cookie for cookie in cookies if cookie.name == auth_manager.cookie_name and cookie.path == auth_manager.cookie_path]
-        if len(auth_cookie_list) == 0:
-            return None
-        else:
-            return auth_cookie_list[0]
-    
     @pytest.mark.parametrize('remember', [False, True])
     async def test_successful_login(self, app: Quart, test_client: TestClientProtocol, existing_user_details: UserDetails, remember: bool):
         test_client.cookie_jar.clear() # type: ignore
@@ -70,11 +58,11 @@ class TestLogin:
             password=existing_user_details.password
         )
         response = await test_client.post(f'/user/login?remember={remember}', json=login_credential)
-        assert response.status_code == 200
+        assert response.status_code == 204
         response_body = await response.get_json()
-        assert response_body == 'Log-in successful'
+        assert response_body is None
         auth_manager: QuartAuth = getattr(app, 'auth_manager')
-        auth_cookie = self.get_client_auth_cookie(test_client, auth_manager)
+        auth_cookie = get_client_auth_cookie(test_client, auth_manager)
         assert auth_cookie is not None
         async with app.app_context():
             user_id = await orm_session.scalar(select(User.id).where(User.username == login_credential.username))
@@ -105,3 +93,13 @@ class TestLogin:
         assert response.status_code == 401
         response_body = await response.get_json()
         assert response_body == 'Invalid credential'
+
+class TestLogout:
+    async def test_logout(self, app: Quart, test_client: TestClientProtocol, logged_in_user_details: UserDetails):
+        response = await test_client.post('/user/logout')
+        assert response.status_code == 204
+        response_body = await response.get_json()
+        assert response_body is None
+        auth_manager: QuartAuth = getattr(app, 'auth_manager')
+        auth_cookie = get_client_auth_cookie(test_client, auth_manager)
+        assert auth_cookie is None

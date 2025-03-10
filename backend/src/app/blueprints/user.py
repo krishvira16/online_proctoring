@@ -1,7 +1,7 @@
 from dataclasses import dataclass
 
-from quart import Blueprint, jsonify
-from quart_auth import AuthUser, login_user
+from quart import Blueprint, Response
+from quart_auth import AuthUser, login_user, logout_user
 from quart_schema import validate_querystring, validate_request
 from sqlalchemy import select
 
@@ -46,7 +46,7 @@ async def create_account(data: UserDetails):
         password_hash=password_hash
     )
     orm_session.add(new_user)
-    return jsonify('Account created successfully'), 201
+    return Response(status=201)
 
 @dataclass
 class LoginCredential:
@@ -75,6 +75,11 @@ async def login(data: LoginCredential, query_args: RememberMeOption):
         user_id, password_hash = result._tuple()
         if await check_password_hash(password_hash, data.password):
             login_user(AuthUser(str(user_id)), remember=query_args.remember)
-            return jsonify('Log-in successful')
+            return Response(status=204)
         else:
             raise InvalidCredentialError
+
+@bp.post('/logout')
+async def logout():
+    logout_user()
+    return Response(status=204)
