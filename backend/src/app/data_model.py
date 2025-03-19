@@ -89,7 +89,12 @@ class MultipleChoiceQuestion(Base, kw_only=True):
         post_update=True, 
         overlaps="multiple_choice_question"
     )
-    __table_args__ = ForeignKeyConstraint(columns=['id', 'correct_option_id'], refcolumns=['option.question_id', 'option.id']),
+    __table_args__ = ForeignKeyConstraint(
+        columns=['id', 'correct_option_id'],
+        refcolumns=['option.question_id', 'option.id'],
+        name='multiple_choice_question_id_correct_option_id_fkey',
+        use_alter=True,
+    ),
 
 class Option(Base):
     __tablename__ = 'option'

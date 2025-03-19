@@ -1,5 +1,5 @@
 # Environment
-.env
+*.env
 
 # Byte-compiled files
 __pycache__/

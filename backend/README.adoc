@@ -5,7 +5,7 @@
 
 . Create a Python virtual environment.
 . Install the app by running `pip install .`.
-. Set the `PROFILE` environment variable to either `development` or `production` to configure the app according to the deploy.
+. Set the `PROFILE` environment variable to either `development` or `production` to configure the app according to the deploy. This setting is not required for a testing deploy. Also install environment-specific dependencies by running `pip install --group <environment>`, where `<environment>` could be any of `dev`, `test` or `prod` for development, testing and production, respectively.
 . In the `production` profile, set the secret key used for securely signing cookies by setting the `QUART_SECRET_KEY` environment variable to the key value. To generate a secret key, run the following code:
 +
 [source, python]
@@ -25,7 +25,8 @@ The work factor should be tuned for the deploy system since the performance vari
 --
 +
 NOTE: In the `development` profile, the work factor is set to the minimum value of 4 to reduce the time for password verification as there is no security threat.
-. In the `production` profile, set the following environment variables used by the application to connect to the database:
+. In the `development` profile, the default database used is a deployment-specific SQLite file database. This requires the app instance folder to be created first, which is where the SQLite database file will reside. Run the `quart create_instance_folder` command to create the app instance folder. Alternatively, set the `DB_SYSTEM` environment variable to `postgresql` to configure the app to connect to a PostgreSQL database server. Also install the driver of the database used by running `pip install --group <db_system>`, where `<db_system>` could be `sqlite` or `postgresql`.
+. When using a PostgreSQL database, set the following environment variables used by the application to connect to the database server:
 +
 [%autowidth.stretch]
 |===
@@ -44,11 +45,12 @@ NOTE: In the `development` profile, the work factor is set to the minimum value 
 |The port number of the database server.
 
 |`DB_NAME`
-|The name of the database schema for this application.
+|The name of the database for this application.
 |===
-. Initialise the database schema by running the `quart init-db` command, if not done already.
-+
-NOTE: In the `development` profile, this requires the app instance folder to be created first, which is where the SQLite database file will reside. Run the `quart create-instance-folder` command to create the app instance folder.
+. Create the database schema objects by running the `quart create_db_schema_objects` command, if not done already.
+
+== Testing
+Run the `pytest` command to run the unit tests.
 
 == Data model
 Refer to xref:docs/data_model.adoc[this document].

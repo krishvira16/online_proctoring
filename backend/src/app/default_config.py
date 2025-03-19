@@ -12,20 +12,38 @@ class Config:
         self.BCRYPT_LOG_ROUNDS: int
         self.BCRYPT_HANDLE_LONG_PASSWORDS: bool = True
 
+    @staticmethod
+    def get_postgresql_connect_URL():
+        return URL.create(
+            drivername='postgresql+asyncpg',
+            username=environ['DB_USERNAME'],
+            password=environ['DB_PASSWORD'],
+            host=environ['DB_HOST'],
+            port=int(environ['DB_PORT']),
+            database=environ['DB_NAME']
+        )
+
 class DevelopmentConfig(Config):
     def __init__(self, app: Quart) -> None:
         super().__init__(app)
         instance_folder = Path(app.instance_path)
-        self.DB_URI = URL.create(
-            drivername='sqlite+aiosqlite',
-            database=str(instance_folder/'db.sqlite')
-        )
+        DB_SYSTEM = environ.get('DB_SYSTEM', 'sqlite')
+        match DB_SYSTEM:
+            case 'sqlite':
+                self.DB_URI = URL.create(
+                    drivername='sqlite+aiosqlite',
+                    database=str(instance_folder/'db.sqlite')
+                )
+            case 'postgresql':
+                self.DB_URI = Config.get_postgresql_connect_URL()
+            case _:
+                raise ValueError(f'Unsupported database system: {DB_SYSTEM}')
         self.SECRET_KEY = 'dev'
         environ['QUART_DEBUG'] = 'True'
         self.QUART_AUTH_COOKIE_SECURE = False
         self.BCRYPT_LOG_ROUNDS = 4
         
-        @app.cli.command('create-instance-folder')
+        @app.cli.command('create_instance_folder')
         def create_instance_folder():
             instance_folder.mkdir(parents=True)
 
@@ -38,14 +56,7 @@ class TestingConfig(DevelopmentConfig):
 class ProductionConfig(Config):
     def __init__(self, app: Quart) -> None:
         super().__init__(app)
-        self.DB_URI = URL.create(
-            drivername='mysql+aiomysql',
-            username=environ['DB_USERNAME'],
-            password=environ['DB_PASSWORD'],
-            host=environ['DB_HOST'],
-            port=int(environ['DB_PORT']),
-            database=environ['DB_NAME']
-        )
+        self.DB_URI = Config.get_postgresql_connect_URL()
         self.SECRET_KEY = environ['QUART_SECRET_KEY']
         self.BCRYPT_LOG_ROUNDS = int(environ['BCRYPT_LOG_ROUNDS'])
 
