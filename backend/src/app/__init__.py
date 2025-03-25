@@ -5,11 +5,8 @@ from quart import Quart
 from quart_auth import QuartAuth
 from quart_schema import QuartSchema
 
-from .default_config import profile_config_type
-from . import database
-from . import password_hashing
-from . import error_handling
-from . import blueprints
+from . import blueprints, database, error_handling, password_hashing
+from .config.profile import profile_config_type
 
 
 def create_app(use_testing_profile: bool = False):
