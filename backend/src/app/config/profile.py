@@ -5,7 +5,7 @@ from quart import Quart
 from sqlalchemy import URL
 
 
-class Config:
+class ProfileConfig:
     def __init__(self, app: Quart) -> None:
         self.DB_URI: str | URL
         self.SECRET_KEY: str
@@ -23,7 +23,7 @@ class Config:
             database=environ['DB_NAME']
         )
 
-class DevelopmentConfig(Config):
+class DevelopmentConfig(ProfileConfig):
     def __init__(self, app: Quart) -> None:
         super().__init__(app)
         instance_folder = Path(app.instance_path)
@@ -35,7 +35,7 @@ class DevelopmentConfig(Config):
                     database=str(instance_folder/'db.sqlite')
                 )
             case 'postgresql':
-                self.DB_URI = Config.get_postgresql_connect_URL()
+                self.DB_URI = ProfileConfig.get_postgresql_connect_URL()
             case _:
                 raise ValueError(f'Unsupported database system: {DB_SYSTEM}')
         self.SECRET_KEY = 'dev'
@@ -53,14 +53,14 @@ class TestingConfig(DevelopmentConfig):
         self.TESTING: bool = True
         self.DB_URI: str = 'sqlite+aiosqlite:///:memory:'
 
-class ProductionConfig(Config):
+class ProductionConfig(ProfileConfig):
     def __init__(self, app: Quart) -> None:
         super().__init__(app)
-        self.DB_URI = Config.get_postgresql_connect_URL()
+        self.DB_URI = ProfileConfig.get_postgresql_connect_URL()
         self.SECRET_KEY = environ['QUART_SECRET_KEY']
         self.BCRYPT_LOG_ROUNDS = int(environ['BCRYPT_LOG_ROUNDS'])
 
-profile_config_type: dict[str, type[Config]] = {
+profile_config_type: dict[str, type[ProfileConfig]] = {
     'development': DevelopmentConfig,
     'testing': TestingConfig,
     'production': ProductionConfig,
