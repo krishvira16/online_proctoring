@@ -4,11 +4,10 @@ from contextlib import asynccontextmanager
 from functools import wraps
 
 from quart import Quart, current_app, g
-from sqlalchemy import event
-from sqlalchemy.engine.interfaces import DBAPIConnection
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, create_async_engine
 from werkzeug.local import LocalProxy
 
+from .config.database import engine_event_registrar
 from .data_model import Base
 
 
@@ -20,12 +19,7 @@ def create_engine_manager(app: Quart):
             echo=True,
             pool_pre_ping=True
         )
-        if engine.name == 'sqlite':
-            @event.listens_for(engine.sync_engine, 'connect')
-            def enable_sqlite_foreign_keys(dbapi_connection: DBAPIConnection, connection_record):
-                cursor = dbapi_connection.cursor()
-                cursor.execute('PRAGMA foreign_keys=ON')
-                cursor.close()
+        engine_event_registrar[engine.name].register_engine_events(engine)
         setattr(app, 'engine', engine)
         yield
         await engine.dispose()

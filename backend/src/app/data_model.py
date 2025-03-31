@@ -3,15 +3,23 @@ from dataclasses import KW_ONLY, dataclass
 from datetime import datetime
 from typing import Annotated, Optional
 
-from sqlalchemy import ForeignKey, ForeignKeyConstraint, UniqueConstraint
+from sqlalchemy import DateTime, Float, ForeignKey, ForeignKeyConstraint, Integer, Text, UniqueConstraint
 from sqlalchemy.ext.asyncio import AsyncAttrs
-from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase, Mapped, mapped_column, relationship, composite
+from sqlalchemy.ext.orderinglist import ordering_list
+from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase, Mapped, mapped_column, relationship, composite, attribute_keyed_dict, WriteOnlyMapped
+
+from .config.database.sqlite import TzAwareSqliteDateTime
 
 
 int_pk = Annotated[int, mapped_column(primary_key=True)]
 
+def get_id_columns(mapped_class):
+    return mapped_class.id.property.props
+
 class Base(AsyncAttrs, MappedAsDataclass, DeclarativeBase):
-    pass
+    type_annotation_map = {
+        datetime: DateTime(timezone=True).with_variant(TzAwareSqliteDateTime, 'sqlite'),
+    }
 
 class User(Base):
     __tablename__ = 'user'
@@ -37,29 +45,38 @@ class TestTaker(Base, kw_only=True):
     __tablename__ = 'test_taker'
 
     id: Mapped[int_pk] = mapped_column(ForeignKey('user.id', ondelete='CASCADE'), init=False)
-    test_attempts: Mapped[list['TestAttempt']] = relationship(back_populates='test_taker', cascade='all, delete-orphan')
+    test_attempts: Mapped[dict[int, 'TestAttempt']] = relationship(
+        cascade='all, delete-orphan',
+        default_factory=dict, collection_class=attribute_keyed_dict('test_id'),
+    )
 
 class Invigilator(Base, kw_only=True):
     __tablename__ = 'invigilator'
 
     id: Mapped[int_pk] = mapped_column(ForeignKey('user.id', ondelete='CASCADE'), init=False)
-    invigilations: Mapped[list['TestAttempt']] = relationship(back_populates='invigilator')
+    invigilations: Mapped[list['TestAttempt']] = relationship(back_populates='invigilator', default_factory=list)
 
 class Test(Base, kw_only=True):
     __tablename__ = 'test'
     
     id: Mapped[int_pk] = mapped_column(init=False)
     title: Mapped[str]
-    description: Mapped[str]
+    description: Mapped[str] = mapped_column(Text)
     start_time: Mapped[datetime]
     end_time: Mapped[datetime]
-    guidelines: Mapped[str]
-    questions: Mapped[list['Question']] = relationship(cascade='all, delete-orphan')
+    guidelines: Mapped[str] = mapped_column(Text)
+    questions: Mapped[list['Question']] = relationship(
+        cascade='all, delete-orphan',
+        order_by='Question.number', collection_class=ordering_list('number', reorder_on_append=True),
+    )
     
-    creator_id: Mapped[int] = mapped_column(ForeignKey("test_setter.id"), init=False)
-    creator: Mapped[TestSetter] = relationship(back_populates="created_tests")
+    creator_id: Mapped[int] = mapped_column(ForeignKey('test_setter.id'), init=False)
+    creator: Mapped[TestSetter] = relationship(back_populates='created_tests')
     
-    attempts: Mapped[list['TestAttempt']] = relationship(back_populates='test', cascade='all, delete-orphan', default_factory=list)
+    attempts: Mapped[dict[int, 'TestAttempt']] = relationship(
+        cascade='all, delete-orphan',
+        default_factory=dict, collection_class=attribute_keyed_dict('test_taker_id'),
+    )
 
     @property
     def max_marks(self) -> int:
@@ -67,13 +84,29 @@ class Test(Base, kw_only=True):
 
 class Question(Base, kw_only=True):
     __tablename__ = 'question'
+
+    @dataclass(frozen=True)
+    class Id:
+        test_id: int
+        discriminator: int
     
-    id: Mapped[int_pk] = mapped_column(init=False)
-    test_id: Mapped[int] = mapped_column(ForeignKey("test.id", ondelete='CASCADE'), init=False)
-    question_text: Mapped[str]
-    multiple_choice_question: Mapped[Optional['MultipleChoiceQuestion']] = relationship(default=None, cascade='all, delete-orphan')
-    text_field_question: Mapped[Optional['TextFieldQuestion']] = relationship(default=None, cascade='all, delete-orphan')
-    attachment_question: Mapped[Optional['AttachmentQuestion']] = relationship(default=None, cascade='all, delete-orphan')
+    id: Mapped[Id] = composite(
+        mapped_column('test_id', ForeignKey('test.id', ondelete='CASCADE'), primary_key=True), 
+        mapped_column('discriminator', autoincrement=True, primary_key=True), 
+        init=False,
+    )
+    number: Mapped[int] = mapped_column(init=False)
+    __table_args__ = (
+        UniqueConstraint(
+            'test_id', number,
+            name='question_number_uq',
+            deferrable=True, initially='DEFERRED',
+        ),
+    )
+    question_text: Mapped[str] = mapped_column(Text)
+    multiple_choice_question: Mapped[Optional['MultipleChoiceQuestion']] = relationship(cascade='all, delete-orphan', default=None)
+    text_field_question: Mapped[Optional['TextFieldQuestion']] = relationship(cascade='all, delete-orphan', default=None)
+    attachment_question: Mapped[Optional['AttachmentQuestion']] = relationship(cascade='all, delete-orphan', default=None)
     max_marks: Mapped[int]
     
     answer_attempts: Mapped[list['Answer']] = relationship(back_populates='question', cascade='all, delete-orphan', default_factory=list)
@@ -81,38 +114,111 @@ class Question(Base, kw_only=True):
 class MultipleChoiceQuestion(Base, kw_only=True):
     __tablename__ = 'multiple_choice_question'
     
-    id: Mapped[int_pk] = mapped_column(ForeignKey('question.id', ondelete='CASCADE'), init=False)
-    options: Mapped[list['Option']] = relationship(foreign_keys='[Option.question_id]', cascade='all, delete-orphan')
-    correct_option_id: Mapped[None | int] = mapped_column(init=False)
-    correct_option: Mapped['Option'] = relationship(
-        foreign_keys='[MultipleChoiceQuestion.id, MultipleChoiceQuestion.correct_option_id]', 
-        post_update=True, 
-        overlaps="multiple_choice_question"
+    id: Mapped[Question.Id] = composite(
+        mapped_column('test_id', primary_key=True),
+        mapped_column('discriminator', primary_key=True),
+        init=False,
     )
-    __table_args__ = ForeignKeyConstraint(
-        columns=['id', 'correct_option_id'],
-        refcolumns=['option.question_id', 'option.id'],
-        name='multiple_choice_question_id_correct_option_id_fkey',
-        use_alter=True,
-    ),
+    __table_args__ = (
+        ForeignKeyConstraint(
+            columns=['test_id', 'discriminator'],
+            refcolumns=get_id_columns(Question),
+            ondelete='CASCADE',
+        ),
+    )
 
-class Option(Base):
-    __tablename__ = 'option'
+    class Option(Base):
+        __tablename__ = 'option'
+        
+        @dataclass(frozen=True)
+        class Id:
+            multiple_choice_question_id: Question.Id
+            discriminator: int
+
+            @classmethod
+            def _generate(cls, test_id: int, question_discriminator: int, discriminator: int) -> 'MultipleChoiceQuestion.Option.Id':
+                """generate an object from a database row"""
+                return MultipleChoiceQuestion.Option.Id(Question.Id(test_id, question_discriminator), discriminator)
+            
+            def __composite_values__(self) -> tuple[int, int, int]:
+                """generate a database row from an object"""
+                return dataclasses.astuple(self.multiple_choice_question_id) + (self.discriminator,)
+        
+        id: Mapped[Id] = composite(
+            Id._generate,
+            mapped_column('test_id', Integer, primary_key=True),
+            mapped_column('question_discriminator', Integer, primary_key=True),
+            mapped_column('discriminator', Integer, autoincrement=True, primary_key=True),
+            init=False,
+        )
+        number: Mapped[int] = mapped_column(init=False)
+        __table_args__ = (
+            UniqueConstraint(
+                'test_id', 'question_discriminator', number,
+                name='option_number_uq',
+                deferrable=True, initially='DEFERRED',
+            ),
+            ForeignKeyConstraint(
+                columns=['test_id', 'question_discriminator'],
+                refcolumns=['multiple_choice_question.test_id', 'multiple_choice_question.discriminator'],
+                ondelete='CASCADE',
+            ),
+        )
+        option_text: Mapped[str] = mapped_column(Text)
     
-    id: Mapped[int_pk] = mapped_column(init=False)
-    question_id: Mapped[int] = mapped_column(ForeignKey("multiple_choice_question.id", ondelete='CASCADE'), init=False)
-    __table_args__ = UniqueConstraint('id', 'question_id'),
-    option_text: Mapped[str]
+    options: Mapped[list[Option]] = relationship(
+        foreign_keys='[Option.test_id, Option.question_discriminator]',
+        cascade='all, delete-orphan',
+        order_by='Option.number', collection_class=ordering_list('number', reorder_on_append=True),
+    )
+    correct_option_discriminator: Mapped[None | int] = mapped_column(init=False)
+    correct_option: Mapped[Option] = relationship(
+        foreign_keys='[MultipleChoiceQuestion.test_id, MultipleChoiceQuestion.discriminator, MultipleChoiceQuestion.correct_option_discriminator]', 
+        post_update=True, 
+        overlaps='multiple_choice_question',
+        passive_deletes='all',
+    )
+    __table_args__ += (
+        ForeignKeyConstraint(
+            columns=['test_id', 'discriminator', 'correct_option_discriminator'],
+            refcolumns=get_id_columns(Option),
+            name='multiple_choice_question_correct_option_fkey',
+            use_alter=True,
+            deferrable=True, initially='DEFERRED',
+        ),
+    )
 
 class TextFieldQuestion(Base):
     __tablename__ = 'text_field_question'
 
-    id: Mapped[int_pk] = mapped_column(ForeignKey('question.id', ondelete='CASCADE'), init=False)
+    id: Mapped[Question.Id] = composite(
+        mapped_column('test_id', primary_key=True),
+        mapped_column('discriminator', primary_key=True),
+        init=False,
+    )
+    __table_args__ = (
+        ForeignKeyConstraint(
+            columns=['test_id', 'discriminator'],
+            refcolumns=get_id_columns(Question),
+            ondelete='CASCADE',
+        ),
+    )
 
 class AttachmentQuestion(Base):
     __tablename__ = 'attachment_question'
 
-    id: Mapped[int_pk] = mapped_column(ForeignKey('question.id', ondelete='CASCADE'), init=False)
+    id: Mapped[Question.Id] = composite(
+        mapped_column('test_id', primary_key=True),
+        mapped_column('discriminator', primary_key=True),
+        init=False,
+    )
+    __table_args__ = (
+        ForeignKeyConstraint(
+            columns=['test_id', 'discriminator'],
+            refcolumns=get_id_columns(Question),
+            ondelete='CASCADE',
+        ),
+    )
 
 @dataclass
 class Point:
@@ -154,97 +260,163 @@ class Rectangle:
 class TestAttempt(Base, kw_only=True):
     __tablename__ = 'test_attempt'
     
-    id: Mapped[int_pk] = mapped_column(init=False)
-    test_id: Mapped[int] = mapped_column(ForeignKey("test.id", ondelete='CASCADE'), init=False)
-    test: Mapped[Test] = relationship(back_populates="attempts")
-    test_taker_id: Mapped[int] = mapped_column(ForeignKey("test_taker.id", ondelete='CASCADE'), init=False)
-    test_taker: Mapped[TestTaker] = relationship(back_populates="test_attempts", foreign_keys='[TestAttempt.test_taker_id]')
-    __table_args__ = UniqueConstraint('test_id', 'test_taker_id'),
-    invigilator_id: Mapped[int] = mapped_column(ForeignKey("invigilator.id"), init=False)
+    @dataclass(frozen=True)
+    class Id:
+        test_id: int
+        test_taker_id: int
+    test_id: Mapped[int_pk] = mapped_column(ForeignKey('test.id', ondelete='CASCADE'), init=False)
+    test_taker_id: Mapped[int_pk] = mapped_column(ForeignKey('test_taker.id', ondelete='CASCADE'), init=False)
+    id: Mapped[Id] = composite(test_id, test_taker_id, init=False)
+
+    invigilator_id: Mapped[int] = mapped_column(ForeignKey('invigilator.id'), init=False)
     invigilator: Mapped[Invigilator] = relationship(back_populates='invigilations', foreign_keys='[TestAttempt.invigilator_id]')
     environment_image_url: Mapped[str]
-    top_left_x: Mapped[float]
-    top_left_y: Mapped[float]
-    top_right_x: Mapped[float]
-    top_right_y: Mapped[float]
-    bottom_left_x: Mapped[float]
-    bottom_left_y: Mapped[float]
-    bottom_right_x: Mapped[float]
-    bottom_right_y: Mapped[float]
     screen_position: Mapped[Rectangle] = composite(
         Rectangle._generate,
-        'top_left_x', 'top_left_y',
-        'top_right_x', 'top_right_y',
-        'bottom_left_x', 'bottom_left_y',
-        'bottom_right_x', 'bottom_right_y'
+        mapped_column('top_left_x', Float), mapped_column('top_left_y', Float),
+        mapped_column('top_right_x', Float), mapped_column('top_right_y', Float),
+        mapped_column('bottom_left_x', Float), mapped_column('bottom_left_y', Float),
+        mapped_column('bottom_right_x', Float), mapped_column('bottom_right_y', Float)
     )
-    start_time: Mapped[None | datetime]
-    answers: Mapped[list['Answer']] = relationship(back_populates='test_attempt', cascade='all, delete-orphan')
-    end_time: Mapped[None | datetime]
+    start_time: Mapped[None | datetime] = mapped_column(default=None)
+    answers: Mapped[dict[Question.Id, 'Answer']] = relationship(
+        cascade='all, delete-orphan',
+        default_factory=dict, collection_class=attribute_keyed_dict('question_id'),
+        overlaps='answer_attempts, question',
+    )
+    end_time: Mapped[None | datetime] = mapped_column(default=None)
 
     @property
     def marks_obtained(self) -> None | int:
-        if any(answer.marks_obtained is None for answer in self.answers):
+        if any(answer.marks_obtained is None for answer in self.answers.values()):
             return None
         else:
-            return sum(answer.marks_obtained for answer in self.answers) # type: ignore
+            return sum(answer.marks_obtained for answer in self.answers.values()) # type: ignore
 
-    gaze_data: Mapped[list['GazeData']] = relationship(back_populates='test_attempt', cascade='all, delete-orphan')
-    caught_cheating: Mapped[bool]
+    gaze_data: WriteOnlyMapped['GazeData'] = relationship(passive_deletes=True, cascade='all, delete-orphan', init=False)
+    caught_cheating: Mapped[bool] = mapped_column(default=False)
 
 class Answer(Base, kw_only=True):
     __tablename__ = 'answer'
     
-    test_attempt_id: Mapped[int_pk] = mapped_column(ForeignKey("test_attempt.id", ondelete='CASCADE'), init=False)
-    test_attempt: Mapped[TestAttempt] = relationship(back_populates="answers")
-    question_id: Mapped[int_pk] = mapped_column(ForeignKey("question.id", ondelete='CASCADE'), init=False)
-    question: Mapped[Question] = relationship(back_populates="answer_attempts")
-    mcq_answer: Mapped[Optional['MCQAnswer']] = relationship(cascade='all, delete-orphan')
-    text_field_answer: Mapped[Optional['TextFieldAnswer']] = relationship(cascade='all, delete-orphan')
-    attachment_answer: Mapped[Optional['AttachmentAnswer']] = relationship(cascade='all, delete-orphan')
-    marks_obtained: Mapped[None | int]
+    @dataclass(frozen=True)
+    class Id:
+        test_id: int
+        test_taker_id: int
+        question_discriminator: int
+    test_id: Mapped[int_pk] = mapped_column(init=False)
+    test_taker_id: Mapped[int_pk] = mapped_column(init=False)
+    question_id: Mapped[Question.Id] = composite(
+        test_id,
+        mapped_column('question_discriminator', primary_key=True),
+        init=False,
+    )
+    id: Mapped[Id] = composite(test_id, test_taker_id, 'question_discriminator', init=False)
+    __table_args__ = (
+        ForeignKeyConstraint(
+            columns=['test_id', 'test_taker_id'],
+            refcolumns=get_id_columns(TestAttempt),
+            ondelete='CASCADE',
+        ),
+        ForeignKeyConstraint(
+            columns=['test_id', 'question_discriminator'],
+            refcolumns=get_id_columns(Question),
+            ondelete='CASCADE',
+        ),
+    )
+    question: Mapped[Question] = relationship(back_populates='answer_attempts')
+    mcq_answer: Mapped[Optional['MCQAnswer']] = relationship(cascade='all, delete-orphan', default=None)
+    text_field_answer: Mapped[Optional['TextFieldAnswer']] = relationship(cascade='all, delete-orphan', default=None)
+    attachment_answer: Mapped[Optional['AttachmentAnswer']] = relationship(cascade='all, delete-orphan', default=None)
+    marks_obtained: Mapped[None | int] = mapped_column(default=None)
     is_bookmarked: Mapped[bool] = mapped_column(default=False)
 
 class MCQAnswer(Base):
     __tablename__ = 'mcq_answer'
 
-    test_attempt_id: Mapped[int_pk] = mapped_column(init=False)
-    question_id: Mapped[int_pk] = mapped_column(init=False)
-    chosen_option_id: Mapped[Optional[int]] = mapped_column(init=False)
-    chosen_option: Mapped[Optional[Option]] = relationship(default=None, overlaps="mcq_answer")
+    test_id: Mapped[int_pk] = mapped_column(init=False)
+    test_taker_id: Mapped[int_pk] = mapped_column(init=False)
+    question_id: Mapped[Question.Id] = composite(
+        test_id,
+        mapped_column('question_discriminator', primary_key=True),
+        init=False,
+    )
+    chosen_option_discriminator: Mapped[Optional[int]] = mapped_column(init=False)
+    chosen_option: Mapped[Optional[MultipleChoiceQuestion.Option]] = relationship(default=None, overlaps='mcq_answer')
     __table_args__ = (
-        ForeignKeyConstraint(columns=['test_attempt_id', 'question_id'], refcolumns=['answer.test_attempt_id', 'answer.question_id'], ondelete='CASCADE'),
-        ForeignKeyConstraint(columns=['question_id'], refcolumns=['multiple_choice_question.id']),
-        ForeignKeyConstraint(columns=['question_id', 'chosen_option_id'], refcolumns=['option.question_id', 'option.id']),
+        ForeignKeyConstraint(
+            columns=['test_id', 'test_taker_id', 'question_discriminator'],
+            refcolumns=get_id_columns(Answer),
+            ondelete='CASCADE',
+        ),
+        ForeignKeyConstraint(
+            columns=['test_id', 'question_discriminator'],
+            refcolumns=get_id_columns(MultipleChoiceQuestion),
+        ),
+        ForeignKeyConstraint(
+            columns=['test_id', 'question_discriminator', 'chosen_option_discriminator'],
+            refcolumns=get_id_columns(MultipleChoiceQuestion.Option),
+        ),
     )
 
 class TextFieldAnswer(Base):
     __tablename__ = 'text_field_answer'
 
-    test_attempt_id: Mapped[int_pk] = mapped_column(init=False)
-    question_id: Mapped[int_pk] = mapped_column(init=False)
-    __table_args__ = (
-        ForeignKeyConstraint(columns=['test_attempt_id', 'question_id'], refcolumns=['answer.test_attempt_id', 'answer.question_id'], ondelete='CASCADE'),
-        ForeignKeyConstraint(columns=['question_id'], refcolumns=['text_field_question.id']),
+    test_id: Mapped[int_pk] = mapped_column(init=False)
+    test_taker_id: Mapped[int_pk] = mapped_column(init=False)
+    question_id: Mapped[Question.Id] = composite(
+        test_id,
+        mapped_column('question_discriminator', primary_key=True),
+        init=False,
     )
-    answer_text: Mapped[str] = mapped_column(default='')
+    __table_args__ = (
+        ForeignKeyConstraint(
+            columns=['test_id', 'test_taker_id', 'question_discriminator'],
+            refcolumns=get_id_columns(Answer),
+            ondelete='CASCADE',
+        ),
+        ForeignKeyConstraint(
+            columns=['test_id', 'question_discriminator'],
+            refcolumns=get_id_columns(TextFieldQuestion),
+        ),
+    )
+    answer_text: Mapped[str] = mapped_column(Text, default='')
 
 class AttachmentAnswer(Base):
     __tablename__ = 'attachment_answer'
 
-    test_attempt_id: Mapped[int_pk] = mapped_column(init=False)
-    question_id: Mapped[int_pk] = mapped_column(init=False)
+    test_id: Mapped[int_pk] = mapped_column(init=False)
+    test_taker_id: Mapped[int_pk] = mapped_column(init=False)
+    question_id: Mapped[Question.Id] = composite(
+        test_id,
+        mapped_column('question_discriminator', primary_key=True),
+        init=False,
+    )
     __table_args__ = (
-        ForeignKeyConstraint(columns=['test_attempt_id', 'question_id'], refcolumns=['answer.test_attempt_id', 'answer.question_id'], ondelete='CASCADE'),
-        ForeignKeyConstraint(columns=['question_id'], refcolumns=['attachment_question.id']),
+        ForeignKeyConstraint(
+            columns=['test_id', 'test_taker_id', 'question_discriminator'],
+            refcolumns=get_id_columns(Answer),
+            ondelete='CASCADE',
+        ),
+        ForeignKeyConstraint(
+            columns=['test_id', 'question_discriminator'],
+            refcolumns=get_id_columns(AttachmentQuestion),
+        ),
     )
     attached_file_url: Mapped[Optional[str]] = mapped_column(default=None)
 
 class GazeData(Base):
     __tablename__ = 'gaze_data'
     
-    id: Mapped[int_pk] = mapped_column(init=False)
-    test_attempt_id: Mapped[int] = mapped_column(ForeignKey("test_attempt.id", ondelete='CASCADE'), init=False)
-    test_attempt: Mapped[TestAttempt] = relationship(back_populates="gaze_data")
+    test_id: Mapped[int_pk] = mapped_column(init=False)
+    test_taker_id: Mapped[int_pk] = mapped_column(init=False)
+    discriminator: Mapped[int_pk] = mapped_column(autoincrement=True, init=False)
+    __table_args__ = (
+        ForeignKeyConstraint(
+            columns=['test_id', 'test_taker_id'],
+            refcolumns=get_id_columns(TestAttempt),
+            ondelete='CASCADE',
+        ),
+    )
     timestamp: Mapped[datetime]
     gaze_extrapolation: Mapped[Point] = composite(mapped_column('x'), mapped_column('y'))
