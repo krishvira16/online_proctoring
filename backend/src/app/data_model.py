@@ -8,8 +8,6 @@ from sqlalchemy.ext.asyncio import AsyncAttrs
 from sqlalchemy.ext.orderinglist import ordering_list
 from sqlalchemy.orm import MappedAsDataclass, DeclarativeBase, Mapped, mapped_column, relationship, composite, attribute_keyed_dict, WriteOnlyMapped
 
-from .config.database.sqlite import TzAwareSqliteDateTime
-
 
 int_pk = Annotated[int, mapped_column(primary_key=True)]
 
@@ -18,7 +16,7 @@ def get_id_columns(mapped_class):
 
 class Base(AsyncAttrs, MappedAsDataclass, DeclarativeBase):
     type_annotation_map = {
-        datetime: DateTime(timezone=True).with_variant(TzAwareSqliteDateTime, 'sqlite'),
+        datetime: DateTime(timezone=True),
     }
 
 class User(Base):

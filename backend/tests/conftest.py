@@ -3,7 +3,7 @@ from quart import Quart
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from app import create_app
-from app.database import create_engine_manager, create_db_schema_objects
+from app.database import create_engine_manager, create_db_schema_objects, drop_db_schema_objects
 
 
 @pytest_asyncio.fixture
@@ -12,6 +12,7 @@ async def app():
     engine_manager = create_engine_manager(app)
     async with engine_manager():
         engine: AsyncEngine = getattr(app, 'engine')
+        await drop_db_schema_objects(engine)
         await create_db_schema_objects(engine)
         yield app
 

@@ -1,11 +1,14 @@
 :!last-update-label:
 :icons: font
 
-== Installation and setup instructions:
+== Installation and setup instructions
 
 . Create a Python virtual environment.
 . Install the app by running `pip install .`.
-. Set the `PROFILE` environment variable to either `development` or `production` to configure the app according to the deploy. This setting is not required for a testing deploy. Also install environment-specific dependencies by running `pip install --group <environment>`, where `<environment>` could be any of `dev`, `test` or `prod` for development, testing and production, respectively.
++
+TIP: Use the `-e` option to install in editable mode in development, like so: `pip install -e .`.
+. Install environment-specific dependencies by running `pip install --group <environment>`, where `<environment>` could be any of `dev`, `test` or `prod` for development, testing and production, respectively. Additionally, the `test_dev` group can be installed to ease development of tests.
+. Set the `PROFILE` environment variable to either `development` or `production` to configure the app according to the deploy. This setting is not required for a testing deploy.
 . In the `production` profile, set the secret key used for securely signing cookies by setting the `QUART_SECRET_KEY` environment variable to the key value. To generate a secret key, run the following code:
 +
 [source, python]
@@ -22,11 +25,12 @@ NOTE: In the `development` profile, the secret key is hard-coded to 'dev' as the
 This time-consuming behaviour is intentional, to make it difficult for attackers to crack the password using brute-force methods, but not so costly that it puts excessive burden on the system or irritates users.
 
 The work factor should be tuned for the deploy system since the performance varies drastically from system to system.
+
+Refer to https://docs.spring.io/spring-security/reference/features/authentication/password-storage.html#authentication-password-storage-history[this explanation] for more on password storage security.
 --
 +
 NOTE: In the `development` profile, the work factor is set to the minimum value of 4 to reduce the time for password verification as there is no security threat.
-. In the `development` profile, the default database used is a deployment-specific SQLite file database. This requires the app instance folder to be created first, which is where the SQLite database file will reside. Run the `quart create_instance_folder` command to create the app instance folder. Alternatively, set the `DB_SYSTEM` environment variable to `postgresql` to configure the app to connect to a PostgreSQL database server. Also install the driver of the database used by running `pip install --group <db_system>`, where `<db_system>` could be `sqlite` or `postgresql`.
-. When using a PostgreSQL database, set the following environment variables used by the application to connect to the database server:
+. Set the following environment variables used by the application to connect to the PostgreSQL database server:
 +
 [%autowidth.stretch]
 |===
@@ -47,10 +51,21 @@ NOTE: In the `development` profile, the work factor is set to the minimum value 
 |`DB_NAME`
 |The name of the database for this application.
 |===
-. Create the database schema objects by running the `quart create_db_schema_objects` command, if not done already.
++
+The database user is required to have the following privileges:
++
+** `CONNECT` privilege on the database.
+** `USAGE` privilege on the schema.
+** `SELECT`, `INSERT`, `UPDATE` and `DELETE` default privileges on the schema tables.
+** `USAGE` default privilege on the schema sequences.
+. In `development` and `production` deploys, create the database schema objects by running the `quart create_db_schema_objects` command, if not done already. Running this command requires the database user to be the owner of the schema.
 
 == Testing
+
+The database user in a testing deploy is required to be the owner of the database schema. The schema will be recreated before each test to ensure test isolation.
+
 Run the `pytest` command to run the unit tests.
 
 == Data model
+
 Refer to xref:docs/data_model.adoc[this document].

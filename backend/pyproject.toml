@@ -18,19 +18,21 @@ dependencies = [
 ]
 
 [dependency-groups]
-sqlite = [
-    "aiosqlite ~= 0.21.0",
-]
 postgresql = [
     "asyncpg ~= 0.30.0",
 ]
 dev = [
+    {include-group = "postgresql"},
     "python-dotenv ~= 1.0.1",
 ]
 test = [
-    {include-group = "sqlite"},
+    {include-group = "postgresql"},
     "pytest ~= 8.3.5",
     "pytest-asyncio ~= 0.25.3",
+]
+test_dev = [
+    {include-group = "test"},
+    "pytest-dotenv ~= 0.5.2",
 ]
 prod = [
     {include-group = "postgresql"},

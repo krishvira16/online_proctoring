@@ -2,7 +2,7 @@ from typing import Protocol
 
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from . import postgresql, sqlite
+from . import postgresql
 
 
 class EngineEventRegistrar(Protocol):
@@ -10,6 +10,5 @@ class EngineEventRegistrar(Protocol):
         ...
 
 engine_event_registrar: dict[str, EngineEventRegistrar] = {
-    'sqlite': sqlite,
     'postgresql': postgresql
 }
