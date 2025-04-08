@@ -4,4 +4,16 @@
 .Entity-relationship diagram of the data model
 image::data_model.svg[]
 
-// TODO: describe the data model in detail.
+The *user* entity represents a user of the application. A user may assume any combination of the following three roles:
+
+* *test setter:* the user can create tests and view the results of test attempts.
+* *test taker:* the user can attempt tests and view the results of their test attempts. A test taker can attempt a test only once.
+* *invigilator:* the user can register to invigilate tests, and has to invigilate test attempts assigned to them by the app for their registered tests.
+
+The *test* entity represents an online test. The attributes of a test include the title, a description, guidelines, start and end times. Each test has a list of questions. Each question has the maximum number of marks that can be scored on it. A question can be any combination of the following types:
+
+* *Multiple choice:* the question has a list of options, one of which is correct. The test taker can choose as answer one of the options for the question.
+* *Textual:* the question has a text field, which can be used to provide typed answers/explanations.
+* *File attachment:* the question has a file attachment field, which can be used to provide images of rough work on paper, diagrams drawn on paper, code files, etc.
+
+A *test attempt* represents an attempt on a test by a test taker. Its attributes include the panoramic photo of the test taking environment, the start and end times of the attempt, questions bookmarked for reference by the test taker, whether the test was terminated due to cheating being caught, etc. It also includes the gaze data captured during the duration of the attempt.
