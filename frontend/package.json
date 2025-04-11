@@ -1,6 +1,7 @@
 {
-  "name": "frontend",
-  "version": "0.0.0",
+  "name": "online_proctoring",
+  "version": "0.1.0",
+  "description": "An online exam platform app with automated proctoring using gaze tracking.",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
