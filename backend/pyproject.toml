@@ -8,11 +8,11 @@ authors = [
 ]
 description = "An online exam platform app with automated proctoring using gaze tracking."
 readme = {file = "README.adoc", content-type = "text/plain"}
-requires-python = ">= 3.13.1"
+requires-python = "~= 3.13.1"
 dependencies = [
     "quart ~= 0.20.0",
     "quart-schema[pydantic] ~= 0.21.0",
-    "quart-bcrypt ~= 0.0.9",
+    "quart-bcrypt == 0.0.9",
     "quart-auth ~= 0.11.0",
     "sqlalchemy[asyncio] ~= 2.0.38",
 ]
