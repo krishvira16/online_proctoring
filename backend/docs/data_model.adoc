@@ -1,5 +1,6 @@
-= Data model
 :!last-update-label:
+
+= Data model
 
 .Entity-relationship diagram of the data model
 image::data_model.svg[]
