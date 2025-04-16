@@ -1,4 +1,3 @@
-import importlib
 from os import environ
 
 from quart import Quart
@@ -27,8 +26,7 @@ def create_app(use_testing_profile: bool = False):
 
     error_handling.init_app(app)
     
-    for blueprint_module_name in blueprints.__all__:
-        blueprint_module = importlib.import_module(f'.{blueprint_module_name}', package=blueprints.__name__)
-        app.register_blueprint(blueprint_module.bp)
+    for bp_module in blueprints.bp_modules:
+        app.register_blueprint(bp_module.bp)
 
     return app

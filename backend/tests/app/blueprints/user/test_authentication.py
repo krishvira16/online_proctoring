@@ -7,36 +7,11 @@ import quart.typing
 from quart_auth import QuartAuth, generate_auth_token
 from sqlalchemy import select
 
-from app.blueprints.user import LoginCredential, UserDetails
+from app.blueprints.user import UserDetails
+from app.blueprints.user.authentication import LoginCredential
 from app.data_model import User
 from app.database import orm_session
 
-
-class TestCreateAccount:
-    async def test_create_account(self, app: Quart, test_client: quart.typing.TestClientProtocol, user_details: UserDetails):
-        response = await test_client.post('/user/create_account', json=user_details)
-        assert response.status_code == 201
-        response_body = await response.get_json()
-        assert response_body is None
-        async with app.app_context():
-            saved_user_id = await orm_session.scalar(select(User.id).where(User.username == user_details.username))
-            assert saved_user_id is not None
-    
-    async def test_duplicate_username_error(self, test_client: quart.typing.TestClientProtocol, existing_user_details: UserDetails):
-        # Attempt to create a new user account (with duplicate username):
-        new_user_details = replace(existing_user_details, email='email2@test.py')
-        response = await test_client.post('/user/create_account', json=new_user_details)
-        assert response.status_code == 422
-        response_body = await response.get_json()
-        assert response_body == 'Username is already taken up.'
-    
-    async def test_duplicate_email_error(self, test_client: quart.typing.TestClientProtocol, existing_user_details: UserDetails):
-        # Attempt to create a new user account (with duplicate email address):
-        new_user_details = replace(existing_user_details, username='test_username2')
-        response = await test_client.post('/user/create_account', json=new_user_details)
-        assert response.status_code == 422
-        response_body = await response.get_json()
-        assert response_body == 'E-mail address is already registered.'
 
 def get_client_auth_cookie(test_client: quart.typing.TestClientProtocol, auth_manager: QuartAuth):
     for cookie in list(test_client.cookie_jar):  # type: ignore
@@ -53,11 +28,8 @@ class TestLogin:
     @pytest.mark.parametrize('remember', [False, True])
     async def test_successful_login(self, app: Quart, test_client: quart.typing.TestClientProtocol, existing_user_details: UserDetails, remember: bool):
         test_client.cookie_jar.clear() # type: ignore
-        login_credential = LoginCredential(
-            username=existing_user_details.username,
-            password=existing_user_details.password
-        )
-        response = await test_client.post(f'/user/login?remember={remember}', json=login_credential)
+        login_credential = LoginCredential.from_structural_superset(existing_user_details)
+        response = await test_client.post(f'/user/authentication/login?remember={remember}', json=login_credential)
         assert response.status_code == 204
         response_body = await response.get_json()
         assert response_body is None
@@ -75,28 +47,22 @@ class TestLogin:
             assert auth_cookie.discard is True
 
     async def test_non_existant_username(self, test_client: quart.typing.TestClientProtocol, existing_user_details: UserDetails):
-        login_credential = LoginCredential(
-            username='some_username',
-            password=existing_user_details.password
-        )
-        response = await test_client.post('/user/login', json=login_credential)
+        login_credential = replace(LoginCredential.from_structural_superset(existing_user_details), username='some_username')
+        response = await test_client.post('/user/authentication/login', json=login_credential)
         assert response.status_code == 401
         response_body = await response.get_json()
         assert response_body == 'Invalid credential'
     
     async def test_invalid_password(self, test_client: quart.typing.TestClientProtocol, existing_user_details: UserDetails):
-        login_credential = LoginCredential(
-            username=existing_user_details.username,
-            password='some_password'
-        )
-        response = await test_client.post('/user/login', json=login_credential)
+        login_credential = replace(LoginCredential.from_structural_superset(existing_user_details), password='some_password')
+        response = await test_client.post('/user/authentication/login', json=login_credential)
         assert response.status_code == 401
         response_body = await response.get_json()
         assert response_body == 'Invalid credential'
 
 class TestLogout:
     async def test_logout(self, app: Quart, test_client: quart.typing.TestClientProtocol, logged_in_user_details: UserDetails):
-        response = await test_client.post('/user/logout')
+        response = await test_client.post('/user/authentication/logout')
         assert response.status_code == 204
         response_body = await response.get_json()
         assert response_body is None

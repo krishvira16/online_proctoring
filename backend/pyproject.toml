@@ -29,6 +29,7 @@ test = [
     {include-group = "postgresql"},
     "pytest ~= 8.3.5",
     "pytest-asyncio ~= 0.25.3",
+    "pyhumps ~= 3.8.0",
 ]
 test_dev = [
     {include-group = "test"},

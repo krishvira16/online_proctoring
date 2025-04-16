@@ -1,7 +1,8 @@
 import pytest_asyncio
 from quart.typing import TestClientProtocol
 
-from app.blueprints.user import LoginCredential, UserDetails
+from app.blueprints.user import UserDetails
+from app.blueprints.user.authentication import LoginCredential
 
 
 @pytest_asyncio.fixture
@@ -20,9 +21,6 @@ async def existing_user_details(test_client: TestClientProtocol, user_details: U
 
 @pytest_asyncio.fixture
 async def logged_in_user_details(test_client: TestClientProtocol, existing_user_details: UserDetails):
-    login_credential = LoginCredential(
-        username=existing_user_details.username,
-        password=existing_user_details.password
-    )
-    await test_client.post('/user/login', json=login_credential)
+    login_credential = LoginCredential.from_structural_superset(existing_user_details)
+    await test_client.post('/user/authentication/login', json=login_credential)
     return existing_user_details
