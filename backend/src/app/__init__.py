@@ -2,6 +2,7 @@ from os import environ
 
 from quart import Quart
 from quart_auth import QuartAuth
+from quart_cors import cors
 from quart_schema import QuartSchema
 
 from . import blueprints, database, error_handling, password_hashing
@@ -21,6 +22,8 @@ def create_app(use_testing_profile: bool = False):
     password_hashing.init_app(app)
     auth_manager = QuartAuth(app) # type: ignore
     setattr(app, 'auth_manager', auth_manager)
+
+    app = cors(app)
 
     QuartSchema(app, convert_casing=True)
 
