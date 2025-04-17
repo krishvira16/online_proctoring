@@ -6,8 +6,9 @@ from quart import Blueprint
 class BlueprintModule(Protocol):
     bp: Blueprint
 
-from . import user  # noqa: E402
+from . import user, test_setter  # noqa: E402
 
 bp_modules: list[BlueprintModule] = [
     user,
+    test_setter,
 ]
