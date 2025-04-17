@@ -6,7 +6,6 @@ import {
   FormControl,
   Validators,
 } from '@angular/forms';
-import { BACKEND_API_BASE_URL } from '../backend-api-base-url/backend-api-base-url.service';
 import { Router, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -39,7 +38,6 @@ export class CreateAccountComponent {
     remember: new FormControl<boolean>(false),
   });
 
-  private backend_api_base_url = inject(BACKEND_API_BASE_URL);
   private http = inject(HttpClient);
   private router = inject(Router);
   private userService = inject(UserService);
@@ -55,7 +53,7 @@ export class CreateAccountComponent {
     this.creating = true;
     this.errorOccurred = false;
     const createAccount$ = this.http.post<void>(
-      `${this.backend_api_base_url}/user/create_account`,
+      '/api/user/create_account',
       {
         username: this.createAccountFormGroup.value.username,
         fullName: this.createAccountFormGroup.value.fullName,
@@ -68,7 +66,7 @@ export class CreateAccountComponent {
         this.creating = false;
         this.loggingIn = true
         const attemptLogin$ = this.http.post<void>(
-          `${this.backend_api_base_url}/user/authentication/login`,
+          '/api/user/authentication/login',
           {
             username: this.createAccountFormGroup.value.username,
             password: this.createAccountFormGroup.value.password,

@@ -1,6 +1,6 @@
 from os import environ
 
-from quart import Quart
+from quart import Blueprint, Quart
 from quart_auth import QuartAuth
 from quart_schema import QuartSchema
 
@@ -26,7 +26,9 @@ def create_app(use_testing_profile: bool = False):
 
     error_handling.init_app(app)
     
+    api_bp = Blueprint('api', __name__, url_prefix='/api')
     for bp_module in blueprints.bp_modules:
-        app.register_blueprint(bp_module.bp)
+        api_bp.register_blueprint(bp_module.bp)
+    app.register_blueprint(api_bp)
 
     return app

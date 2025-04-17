@@ -6,7 +6,6 @@ import {
   FormControl,
   Validators,
 } from '@angular/forms';
-import { BACKEND_API_BASE_URL } from '../backend-api-base-url/backend-api-base-url.service';
 import { Router, RouterLink } from '@angular/router';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
@@ -37,7 +36,6 @@ export class LoginComponent {
     remember: new FormControl<boolean>(false),
   });
 
-  private backend_api_base_url = inject(BACKEND_API_BASE_URL);
   private http = inject(HttpClient);
   private router = inject(Router);
   private userService = inject(UserService);
@@ -51,7 +49,7 @@ export class LoginComponent {
     this.verifying = true;
     this.invalid_credentials = false;
     const attemptLogin$ = this.http.post<void>(
-      `${this.backend_api_base_url}/user/authentication/login`,
+      '/api/user/authentication/login',
       {
         username: this.loginFormGroup.value.username,
         password: this.loginFormGroup.value.password,
