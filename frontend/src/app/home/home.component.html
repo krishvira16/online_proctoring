@@ -1,0 +1,8 @@
+<form [formGroup]="roleSelectionForm" style="display: flex; flex-direction: column; width: fit-content; gap: 15px; justify-self: center;">
+  <span role="heading" style="font-size: large;">Navigate to dashboard:</span>
+  <mat-button-toggle-group formControlName="role" aria-label="User role" (change)="navigateToRolePage()">
+    <mat-button-toggle value="/test_setter">Test setter</mat-button-toggle>
+    <mat-button-toggle value="/test_taker">Test taker</mat-button-toggle>
+    <mat-button-toggle value="/invigilator">Invigilator</mat-button-toggle>
+  </mat-button-toggle-group>
+</form>

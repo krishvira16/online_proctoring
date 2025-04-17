@@ -1,0 +1,45 @@
+<form
+  [formGroup]="loginFormGroup"
+  (submit)="attemptLogin()"
+  style="
+    display: flex;
+    flex-direction: column;
+    width: fit-content;
+    justify-self: center;
+    gap: 15px;
+    padding: 15px;
+    border: 1px solid gray;
+    border-radius: 5px;
+  "
+>
+  <span role="heading" style="font-size: large">Log-in</span>
+  <mat-form-field>
+    <mat-label>Username</mat-label>
+    <input type="text" matInput formControlName="username" />
+    @if (loginFormGroup.controls.username.invalid) {<mat-error>Username is required</mat-error>}
+  </mat-form-field>
+  <mat-form-field>
+    <mat-label>Password</mat-label>
+    <input type="password" matInput formControlName="password" />
+    @if (loginFormGroup.controls.password.invalid) {<mat-error>Password is required</mat-error>}
+  </mat-form-field>
+  <mat-checkbox formControlName="remember">Remember me</mat-checkbox>
+  <button
+    type="submit"
+    mat-flat-button
+    style="width: fit-content; align-self: center"
+    [disabled]="verifying"
+  >
+    Log-in
+  </button>
+  @if (verifying) {<span aria-live="polite">Verifying...</span>}
+  @if (invalid_credentials) {<mat-error>Invalid credentials</mat-error>}
+  <mat-divider></mat-divider>
+  <span>Don't have an account?</span>
+  <a
+    mat-stroked-button
+    style="width: fit-content; align-self: center"
+    routerLink="/create_account"
+    >Create account</a
+  >
+</form>

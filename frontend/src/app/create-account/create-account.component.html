@@ -1,0 +1,61 @@
+<form
+  [formGroup]="createAccountFormGroup"
+  (submit)="createAccount()"
+  style="
+    display: flex;
+    flex-direction: column;
+    width: fit-content;
+    justify-self: center;
+    gap: 15px;
+    padding: 15px;
+    border: 1px solid gray;
+    border-radius: 5px;
+  "
+>
+  <span role="heading" style="font-size: large">Log-in</span>
+  <mat-form-field>
+    <mat-label>Username</mat-label>
+    <input type="text" matInput formControlName="username" />
+    @if (createAccountFormGroup.controls.username.invalid) {<mat-error>Username is required</mat-error>}
+  </mat-form-field>
+  <mat-form-field>
+    <mat-label>Full name</mat-label>
+    <input type="text" matInput formControlName="fullName" />
+    @if (createAccountFormGroup.controls.fullName.invalid) {<mat-error>Full name is required</mat-error>}
+  </mat-form-field>
+  <mat-form-field>
+    <mat-label>Email</mat-label>
+    <input type="email" matInput formControlName="email" />
+    <mat-error>
+      @if (createAccountFormGroup.controls.email.invalid) {
+        @if (createAccountFormGroup.controls.email.hasError('required')) {Email is required}
+        @else {Email is invalid}
+      }
+    </mat-error>
+  </mat-form-field>
+  <mat-form-field>
+    <mat-label>Password</mat-label>
+    <input type="password" matInput formControlName="password" />
+    @if (createAccountFormGroup.controls.password.invalid) {<mat-error>Password is required</mat-error>}
+  </mat-form-field>
+  <mat-checkbox formControlName="remember">Remember my login session</mat-checkbox>
+  <button
+    type="submit"
+    mat-flat-button
+    style="width: fit-content; align-self: center"
+    [disabled]="creating"
+  >
+    Create account
+  </button>
+  @if (creating) {<span aria-live="polite">Creating...</span>}
+  @if (loggingIn) {<span aria-live="polite">Account created successfully! Logging in...</span>}
+  @if (errorOccurred) {<mat-error>Account creation failed: <br /> {{ errorMessage }}</mat-error>}
+  <mat-divider></mat-divider>
+  <span>Already have an account?</span>
+  <a
+    mat-stroked-button
+    style="width: fit-content; align-self: center"
+    routerLink="/login"
+    >Log-in</a
+  >
+</form>

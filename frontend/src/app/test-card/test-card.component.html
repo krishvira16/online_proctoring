@@ -1,0 +1,15 @@
+<mat-card role="group" tabindex="0">
+  <mat-card-header>
+    <mat-card-title>{{ test.title }}</mat-card-title>
+  </mat-card-header>
+  <mat-card-content>
+    <p>{{ test.description }}</p>
+  </mat-card-content>
+  <mat-card-footer>
+    Start time: {{ test.startTime | date }}
+    End time: {{ test.endTime | date }}
+    <mat-card-actions>
+      <a mat-flat-button [routerLink]="`/test_setter/test?id=${test.id}`">View</a>
+    </mat-card-actions>
+  </mat-card-footer>
+</mat-card>
