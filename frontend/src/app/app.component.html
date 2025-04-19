@@ -9,8 +9,13 @@
         <a routerLink="/login">Log-in</a>
       } @else if (userResource.status() == ResourceStatus.Error) {
         ! error
+      } @else if(loggingOut) {
+        Logging out...
       } @else {
-        {{ userResource.value()!.username }}
+        <button mat-button [matMenuTriggerFor]="userMenu">{{ userResource.value()!.username }}</button>
+        <mat-menu #userMenu="matMenu">
+          <button mat-menu-item (click)="logOut()">Log out</button>
+        </mat-menu>
       }
     </span>
   </mat-toolbar>

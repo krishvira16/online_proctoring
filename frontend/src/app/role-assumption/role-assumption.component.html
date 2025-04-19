@@ -1,0 +1,22 @@
+<div
+  style="
+    display: flex;
+    flex-direction: column;
+    width: fit-content;
+    justify-self: center;
+    gap: 15px;
+    padding: 15px;
+  "
+>
+  <span>You have not a registered as a {{ role.displayName }} yet.</span>
+  <button
+    type="button"
+    mat-flat-button
+    (click)="assumeRole()"
+    [disabled]="registering"
+    style="width: fit-content; align-self: center;"
+  >
+    @if (!registering) {Register as {{ role.displayName }}} @else
+    {Registering...}
+  </button>
+</div>

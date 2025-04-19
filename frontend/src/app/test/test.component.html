@@ -1,0 +1,282 @@
+<form
+  [formGroup]="testForm"
+  style="display: flex; flex-direction: column; flex: 1"
+>
+  <div style="display: flex; margin: 10px 20px">
+    <span role="heading" style="font-size: larger"
+      >@if (testId) {View test} @else {Create new test}</span
+    >
+    <span style="flex: 1; text-align: center; color: red"
+      >@if (display_error_message) {There are errors in the form.}</span
+    >
+    <button
+      type="submit"
+      mat-flat-button
+      (click)="saveTest()"
+      [disabled]="saving"
+    >
+      @if (saving) {Saving...} @else {Save}
+    </button>
+  </div>
+  <mat-tab-group dynamicHeight="true">
+    <mat-tab label="Details">
+      <div
+        class="tab-container"
+        style="
+          display: flex;
+          flex: 1;
+          flex-direction: column;
+          align-items: center;
+          gap: 15px;
+          padding: 20px;
+        "
+      >
+        <mat-form-field>
+          <mat-label>Title</mat-label>
+          <input type="text" matInput formControlName="title" />
+          @if (testForm.controls.title.invalid) {<mat-error
+            >Title is required</mat-error
+          >}
+        </mat-form-field>
+        <mat-form-field>
+          <mat-label>Description</mat-label>
+          <textarea matInput formControlName="description"></textarea>
+          @if (testForm.controls.description.invalid) {<mat-error
+            >Description is required</mat-error
+          >}
+        </mat-form-field>
+        <div style="display: flex; flex-direction: row; gap: 10px">
+          <mat-form-field>
+            <mat-label>Start date</mat-label>
+            <input
+              matInput
+              [matDatepicker]="startDatePicker"
+              formControlName="startTime"
+            />
+            <mat-hint>MM/DD/YYYY</mat-hint>
+            <mat-datepicker-toggle
+              matIconSuffix
+              [for]="startDatePicker"
+            ></mat-datepicker-toggle>
+            <mat-datepicker #startDatePicker>
+              <mat-datepicker-actions>
+                <button mat-stroked-button matDatepickerCancel>Cancel</button>
+                <button mat-flat-button matDatepickerApply>Select</button>
+              </mat-datepicker-actions>
+            </mat-datepicker>
+            @if (testForm.controls.startTime.invalid) {<mat-error
+              >Start datetime is required</mat-error
+            >}
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>Start time</mat-label>
+            <input
+              matInput
+              [matTimepicker]="startTimePicker"
+              formControlName="startTime"
+            />
+            <mat-timepicker-toggle matIconSuffix [for]="startTimePicker" />
+            <mat-timepicker #startTimePicker />
+          </mat-form-field>
+        </div>
+        <div style="display: flex; flex-direction: row; gap: 10px">
+          <mat-form-field>
+            <mat-label>End date</mat-label>
+            <input
+              matInput
+              [matDatepicker]="endDatePicker"
+              formControlName="endTime"
+            />
+            <mat-hint>MM/DD/YYYY</mat-hint>
+            <mat-datepicker-toggle
+              matIconSuffix
+              [for]="endDatePicker"
+            ></mat-datepicker-toggle>
+            <mat-datepicker #endDatePicker>
+              <mat-datepicker-actions>
+                <button mat-stroked-button matDatepickerCancel>Cancel</button>
+                <button mat-flat-button matDatepickerApply>Select</button>
+              </mat-datepicker-actions>
+            </mat-datepicker>
+            @if (testForm.controls.endTime.invalid) {<mat-error
+              >End datetime is required</mat-error
+            >}
+          </mat-form-field>
+          <mat-form-field>
+            <mat-label>End time</mat-label>
+            <input
+              matInput
+              [matTimepicker]="endTimePicker"
+              formControlName="endTime"
+            />
+            <mat-timepicker-toggle matIconSuffix [for]="endTimePicker" />
+            <mat-timepicker #endTimePicker />
+          </mat-form-field>
+        </div>
+        <mat-form-field>
+          <mat-label>Guidelines</mat-label>
+          <textarea matInput formControlName="guidelines"></textarea>
+          @if (testForm.controls.guidelines.invalid) {<mat-error
+            >Guidelines are required</mat-error
+          >}
+        </mat-form-field>
+      </div>
+    </mat-tab>
+    <mat-tab label="Questions">
+      <div
+        class="tab-container"
+        style="
+          display: flex;
+          flex: 1;
+          flex-direction: column;
+          align-items: center;
+          gap: 15px;
+          padding: 20px;
+        "
+      >
+        @for (question of testForm.controls.questions.controls; track
+        question.controls.discriminator.value) {
+        <div
+          class="tab-container"
+          style="
+            display: flex;
+            flex: 1;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+            padding: 20px;
+            border: 1px solid grey;
+            border-radius: 5px;
+          "
+          [attr.aria-label]="`Question number ${$index + 1}`"
+        >
+          <span role="heading">Q. {{ $index + 1 }}:</span>
+          <mat-form-field>
+            <mat-label>Question text</mat-label>
+            <textarea
+              matInput
+              [formControl]="question.controls.questionText"
+            ></textarea>
+            @if (question.controls.questionText.invalid) {<mat-error
+              >Question text is required</mat-error
+            >}
+          </mat-form-field>
+          <mat-form-field style="width: fit-content; align-self: end">
+            <mat-label>Max marks</mat-label>
+            <input
+              type="number"
+              matInput
+              [formControl]="question.controls.maxMarks"
+            />
+            @if (question.controls.maxMarks.invalid) {<mat-error
+              >Max marks is required</mat-error
+            >}
+          </mat-form-field>
+          @if (question.controls.multipleChoiceQuestion) {
+          <mat-radio-group
+            class="tab-container-level-2"
+            style="
+              display: flex;
+              width: auto;
+              align-self: stretch;
+              flex: 1;
+              flex-direction: column;
+              align-items: center;
+              gap: 15px;
+              padding: 20px;
+              border: 1px solid grey;
+              border-radius: 5px;
+            "
+            [formControl]="
+              question.controls.multipleChoiceQuestion.controls
+                .correctOptionDiscriminator
+            "
+          >
+            <mat-label role="heading">Multiple-choice question</mat-label>
+            @for (option of
+            question.controls.multipleChoiceQuestion.controls.options.controls;
+            track option.controls.discriminator.value) {
+            <mat-radio-button [value]="option.controls.discriminator.value">
+              <mat-form-field style="width: 500px">
+                <mat-label>Option text</mat-label>
+                <textarea
+                  matInput
+                  [formControl]="option.controls.optionText"
+                ></textarea>
+                @if (option.controls.optionText.invalid) {<mat-error
+                  >Option text is required</mat-error
+                >}
+              </mat-form-field></mat-radio-button
+            >}
+            <button
+              mat-stroked-button
+              (click)="
+                question.controls.multipleChoiceQuestion.controls.options.push(
+                  createOptionForm()
+                )
+              "
+              style="width: fit-content; align-self: center"
+            >
+              Add option
+            </button>
+          </mat-radio-group>
+          } @else {
+          <button
+            mat-stroked-button
+            (click)="
+              question.addControl(
+                'multipleChoiceQuestion',
+                createMultipleChoiceQuestionForm()
+              )
+            "
+            style="width: fit-content; align-self: center"
+          >
+            Add multiple-choice question
+          </button>
+          } @if (question.controls.textFieldQuestion) {
+          <mat-form-field>
+            <mat-label>Answer text</mat-label>
+            <textarea matInput disabled="true"></textarea>
+          </mat-form-field>
+          } @else {
+          <button
+            mat-stroked-button
+            (click)="
+              question.addControl(
+                'textFieldQuestion',
+                createTextFieldQuestionForm()
+              )
+            "
+            style="width: fit-content; align-self: center"
+          >
+            Add text field
+          </button>
+          } @if (question.controls.attachmentQuestion) {
+          <label>Attachment: <input type="file" disabled="true" /></label>
+          } @else {
+          <button
+            mat-stroked-button
+            (click)="
+              question.addControl(
+                'attachmentQuestion',
+                createAttachmentQuestionForm()
+              )
+            "
+            style="width: fit-content; align-self: center"
+          >
+            Add attachment field
+          </button>
+          }
+        </div>
+        }
+        <button
+          mat-stroked-button
+          (click)="testForm.controls.questions.push(createQuestionForm())"
+          style="width: fit-content; align-self: center"
+        >
+          Add question
+        </button>
+      </div>
+    </mat-tab>
+  </mat-tab-group>
+</form>

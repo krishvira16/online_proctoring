@@ -14,6 +14,7 @@ import { MatButtonModule } from '@angular/material/button';
 import { MatDividerModule } from '@angular/material/divider';
 import { UserService } from '../user/user.service';
 import { ErrorReportingService } from '../error-reporting/error-reporting.service';
+import { TestService } from '../test/test.service';
 
 @Component({
   selector: 'app-create-account',
@@ -41,6 +42,7 @@ export class CreateAccountComponent {
   private http = inject(HttpClient);
   private router = inject(Router);
   private userService = inject(UserService);
+  private testService = inject(TestService);
   private errorReportingService = inject(ErrorReportingService);
 
   creating = false;
@@ -80,6 +82,7 @@ export class CreateAccountComponent {
         attemptLogin$.subscribe({
           next: () => {
             this.userService.userResource.reload();
+            this.testService.createdTestsResource.reload();
             const continuePath = history.state.continue ?? '/';
             this.router.navigate([continuePath]);
           },

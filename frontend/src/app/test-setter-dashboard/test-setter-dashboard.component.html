@@ -1,3 +1,9 @@
+<a
+  mat-stroked-button
+  style="width: fit-content; align-self: end; margin: 15px"
+  routerLink="/test_setter/test"
+  >Create new test</a
+>
 @for (createdTest of createdTestsResource.value(); track createdTest.id) {
-  <app-test-card [test]="createdTest"></app-test-card>
+<app-test-card [test]="createdTest"></app-test-card>
 }

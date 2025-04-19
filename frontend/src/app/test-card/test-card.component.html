@@ -9,7 +9,7 @@
     Start time: {{ test.startTime | date }}
     End time: {{ test.endTime | date }}
     <mat-card-actions>
-      <a mat-flat-button [routerLink]="`/test_setter/test?id=${test.id}`">View</a>
+      <a mat-flat-button [routerLink]="`/test_setter/test/${test.id}`">View</a>
     </mat-card-actions>
   </mat-card-footer>
 </mat-card>

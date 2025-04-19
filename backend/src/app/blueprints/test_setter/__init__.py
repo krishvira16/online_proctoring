@@ -4,10 +4,10 @@ from datetime import datetime
 from functools import wraps
 from typing import Optional, Self
 from quart import Blueprint, Response, current_app
-from quart_schema import validate_response
+from quart_schema import validate_request, validate_response
 
 from ...data_model import AttachmentQuestion, MultipleChoiceQuestion, Question, Test, TestSetter, TextFieldQuestion
-from ...database import orm_session
+from ...database import get_orm_session, orm_session
 from ...error_handling import APIError
 from ..user.authentication import authentication_required, ensure_authenticated, get_current_user, current_user
 
@@ -70,9 +70,9 @@ class QuestionDetails:
     discriminator: int
     question_text: str
     max_marks: int
-    multiple_choice_question: 'Optional[MultipleChoiceQuestionDetails]'
-    text_field_question: 'Optional[TextFieldQuestionDetails]'
-    attachment_question: 'Optional[AttachmentQuestionDetails]'
+    multiple_choice_question: 'Optional[MultipleChoiceQuestionDetails]' = None
+    text_field_question: 'Optional[TextFieldQuestionDetails]' = None
+    attachment_question: 'Optional[AttachmentQuestionDetails]' = None
 
     @classmethod
     async def from_structural_superset(cls, question: Question) -> Self:
@@ -140,4 +140,40 @@ class AttachmentQuestionDetails:
 @validate_response(list[TestDetails])
 async def get_tests():
     tests = await current_user.test_setter_role.awaitable_attrs.created_tests # type: ignore
-    return [TestDetails.from_structural_superset(test) for test in tests]
+    return [await TestDetails.from_structural_superset(test) for test in tests]
+
+@core_bp.post('/create_test')
+@validate_request(TestDetails)
+async def create_test(data: TestDetails):
+    test = Test(
+        title=data.title,
+        description=data.description,
+        start_time=data.start_time,
+        end_time=data.end_time,
+        guidelines=data.guidelines,
+        questions=[
+            Question(
+                question_text=question.question_text,
+                max_marks=question.max_marks,
+                multiple_choice_question=MultipleChoiceQuestion(
+                    options=(options:= [
+                        MultipleChoiceQuestion.Option(option_text=option.option_text)
+                        for option in question.multiple_choice_question.options
+                    ]),
+                    correct_option=options[
+                        [option.discriminator for option in question.multiple_choice_question.options]
+                        .index(question.multiple_choice_question.correct_option_discriminator)
+                    ]
+                ) 
+                if question.multiple_choice_question is not None else None,
+                text_field_question=TextFieldQuestion() if question.text_field_question is not None else None,
+                attachment_question=AttachmentQuestion() if question.attachment_question is not None else None
+            )
+            for question in data.questions
+        ],
+        creator=current_user.test_setter_role # type: ignore
+    )
+    orm_session = get_orm_session()
+    orm_session.add(test)
+    await orm_session.commit()
+    return Response(status=204)

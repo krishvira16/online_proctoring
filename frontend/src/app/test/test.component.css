@@ -1,0 +1,13 @@
+:host {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+}
+
+.tab-container > * {
+  width: 600px;
+}
+
+.tab-container-level-2 > * {
+  width: 565px;
+}

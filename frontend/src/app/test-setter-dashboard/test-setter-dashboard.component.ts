@@ -1,11 +1,12 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, effect, inject, ResourceStatus } from '@angular/core';
 import { TestService } from '../test/test.service';
 import { TestCardComponent } from '../test-card/test-card.component';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
+import { MatButtonModule } from '@angular/material/button';
 
 @Component({
   selector: 'app-test-setter-dashboard',
-  imports: [TestCardComponent],
+  imports: [MatButtonModule, RouterLink, TestCardComponent],
   templateUrl: './test-setter-dashboard.component.html',
   styleUrl: './test-setter-dashboard.component.css',
 })
@@ -13,15 +14,19 @@ export class TestSetterDashboardComponent {
   private testService = inject(TestService);
   createdTestsResource = this.testService.createdTestsResource;
 
-  router = inject(Router)
+  router = inject(Router);
 
   authenticationErrorEffect = effect(() => {
-    const e: any = this.createdTestsResource.error();
-    if (e) {
+    if (this.createdTestsResource.status() === ResourceStatus.Error) {
+      const e: any = this.createdTestsResource.error();
       if (e.status === 401) {
-        this.router.navigate(['/login'], {state: {continue: '/test_setter'}});
+        this.router.navigate(['/login'], {
+          state: { continue: '/test_setter' },
+        });
       } else if (e.status === 403) {
-        // TODO: handle role assumption
+        this.router.navigate(['/test_setter/assume_role'], {
+          state: { continue: '/test_setter' },
+        });
       }
     }
   });

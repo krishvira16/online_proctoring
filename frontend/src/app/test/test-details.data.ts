@@ -10,21 +10,21 @@ export interface TestDetails {
 
 export interface QuestionDetails {
   discriminator: number;
-  question_text: string;
-  max_marks: number;
-  multiple_choice_question?: MultipleChoiceQuestionDetails;
-  text_field_question?: TextFieldQuestionDetails;
-  attachment_question?: AttachmentQuestionDetails;
+  questionText: string;
+  maxMarks: number;
+  multipleChoiceQuestion?: MultipleChoiceQuestionDetails;
+  textFieldQuestion?: TextFieldQuestionDetails;
+  attachmentQuestion?: AttachmentQuestionDetails;
 }
 
 export interface MultipleChoiceQuestionDetails {
   options: OptionDetails[];
-  correct_option_discriminator: number;
+  correctOptionDiscriminator: number;
 }
 
 export interface OptionDetails {
   discriminator: number;
-  option_text: string;
+  optionText: string;
 }
 
 export interface TextFieldQuestionDetails {}
